@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# local data and secrets
+.env
+*.db
+server/data/
+
+# front end build output (rebuilt with npm run build in client/)
+server/public/
+
+# Excel temp/lock files, backups and generated PDFs
+~$*.xlsx
+~$*.xls
+excel/backup/
+excel/exports/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python (legacy/ reference only)
+__pycache__/
+*.pyc
+venv/
+.venv/

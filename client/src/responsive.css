@@ -1,0 +1,587 @@
+/* Responsive layout. Loaded after app.css, so the desktop design (see app.css) is the default
+   and everything below only changes what is needed on narrower screens.
+
+   Breakpoints
+     1339px  laptop with a narrow window: the Entry Log drops its "Lines" column so rows still fit
+     1100px  one column: New entry, Entry Log, Dashboard, then the Print Reports panel at the bottom
+      900px  compact page header
+      768px  phones: touch-sized controls, Entry Log and dashboard cards can be collapsed
+             (keep in sync with MOBILE_QUERY in src/useMediaQuery.js)
+      700px  Entry Log table drops the "Lines" column
+      600px  New entry fields wrap into a two-column layout
+      560px  Entry Log rows become two-line cards
+*/
+
+/* ---------- pieces that only matter on small screens ---------- */
+/* The collapse wrappers have no box of their own on desktop, so the Figma layout is untouched. */
+.collapsible,
+.collapsible__inner {
+  display: contents;
+}
+.chevron {
+  flex: none;
+  transition: transform 0.25s ease;
+}
+.chevron--closed {
+  transform: rotate(-90deg);
+}
+.fold-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fold-toggle > span:first-child {
+  flex: 1;
+}
+.fold-toggle:focus-visible {
+  outline: 2px solid var(--burgundy);
+  outline-offset: 2px;
+}
+.fold-toggle__count {
+  padding: 1px 9px;
+  background: var(--burgundy);
+  border-radius: 100px;
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+}
+/* Only the first line shows the Account / Debit / Credit labels on desktop. On phones every line shows them (see 600px). */
+.form-row--lines:not(:first-child) .field__label {
+  display: none;
+}
+
+/* ---------- laptop with a narrow window ---------- */
+@media (min-width: 1101px) and (max-width: 1339px) {
+  .log-col--lines {
+    display: none;
+  }
+  .log-head,
+  .log-row {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .log-col--date {
+    width: 84px;
+  }
+  .log-col--amount {
+    width: 100px;
+  }
+}
+
+/* ---------- one column ---------- */
+@media (max-width: 1100px) {
+  .page {
+    max-width: calc(100% - 32px);
+    padding-bottom: 40px;
+  }
+  .top-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .panel {
+    min-height: 0;
+  }
+
+  /* Entry Log: normal flow instead of the absolute positions used on desktop */
+  .entry-log {
+    padding: 14px 18px;
+  }
+  .entry-log__title,
+  .log-head,
+  .log-body {
+    position: static;
+  }
+  .log-head {
+    margin-top: 12px;
+  }
+  .log-body {
+    margin-bottom: 6px;
+  }
+
+  /* Dashboard: cards on top, Print Reports panel underneath at full width */
+  .dashboard {
+    padding: 14px 20px 24px;
+  }
+  .dashboard__title {
+    margin: 0 0 20px 8px;
+  }
+  .dashboard__body {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .dashboard__cards {
+    flex: none;
+    gap: 16px;
+  }
+
+  /* Print Reports: wider panel, bigger buttons in a grid */
+  .print-panel {
+    width: 100%;
+  }
+  .print-panel__header {
+    padding: 16px 12px 14px;
+  }
+  .print-panel__title {
+    font-size: 24px;
+  }
+  .print-panel__subtitle {
+    font-size: 14px;
+  }
+  .print-panel__group {
+    height: 42px;
+    font-size: 15px;
+  }
+  .print-panel__list {
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .print-panel__list--statements {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .print-panel__list--supporting {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .print-btn {
+    height: 50px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+  }
+  .print-btn svg {
+    flex: none;
+    width: 18px;
+    height: 18px;
+  }
+  .print-btn--primary {
+    grid-column: 1 / -1;
+    font-size: 16px;
+  }
+  .print-panel__error {
+    padding: 0 16px 14px;
+    font-size: 13px;
+    line-height: 17px;
+  }
+}
+
+/* ---------- page header ---------- */
+@media (max-width: 900px) {
+  .site-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: auto;
+    margin-bottom: 24px;
+    padding: 12px 16px 18px;
+  }
+  .site-logo {
+    position: static;
+    flex: none;
+    width: 150px;
+    height: auto;
+    aspect-ratio: 243 / 91;
+  }
+  .site-title {
+    position: static;
+    flex: 1;
+    transform: none;
+    font-size: 44px;
+    line-height: 1.15;
+    text-align: center;
+  }
+  .site-rule {
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: 0;
+    border-top-width: 3px;
+  }
+}
+
+/* ---------- phones ---------- */
+@media (max-width: 768px) {
+  .page {
+    max-width: calc(100% - 24px);
+  }
+  .top-row {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .site-header {
+    gap: 8px;
+    padding: 10px 12px 14px;
+    margin-bottom: 16px;
+  }
+  .site-logo {
+    width: 110px;
+  }
+  .site-title {
+    font-size: 36px;
+  }
+  .site-rule {
+    left: 12px;
+    right: 12px;
+  }
+
+  /* collapsing: the content slides shut by animating its row from 1fr to 0fr */
+  .collapsible {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.3s ease;
+  }
+  .collapsible[data-collapsed='true'] {
+    grid-template-rows: 0fr;
+  }
+  .collapsible__inner {
+    display: block;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .collapsible[data-collapsed='true'] > .collapsible__inner {
+    visibility: hidden; /* once closed, its buttons and fields leave the tab order */
+    transition: visibility 0s 0.3s;
+  }
+
+  /* New entry: touch-sized controls (16px text also stops iOS zooming into inputs) */
+  .entry-form {
+    gap: 14px;
+    padding: 14px 16px 18px;
+  }
+  .field__label {
+    font-size: 13px;
+  }
+  .input {
+    height: 40px;
+    font-size: 16px;
+  }
+  .input--date {
+    font-size: 16px;
+  }
+  .input--select {
+    padding-right: 34px;
+    background-position: right 12px center;
+  }
+  .remove-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .form-lines {
+    max-height: none;
+    overflow: visible;
+    gap: 12px;
+  }
+  .btn {
+    height: 40px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+  .balance-bar {
+    height: auto;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.35;
+    white-space: pre-wrap;
+  }
+
+  /* Entry Log */
+  .entry-log__title .fold-toggle {
+    min-height: 36px;
+  }
+  .log-row {
+    height: 44px;
+  }
+  .row-btn {
+    height: 30px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  /* Dashboard: same cards and same rows, just smaller and collapsible */
+  .dashboard {
+    padding: 12px 12px 16px;
+  }
+  .dashboard__title {
+    margin: 0 0 14px 4px;
+    padding-bottom: 6px;
+    font-size: 18px;
+    line-height: 20px;
+  }
+  .dashboard__cards {
+    gap: 12px;
+  }
+  .report-card__header {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    padding: 8px 12px 12px;
+  }
+  .report-card__title {
+    position: static;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+  .fold-toggle--card {
+    position: relative;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 30px;
+    text-align: center;
+  }
+  .fold-toggle--card > span:first-child {
+    flex: none;
+  }
+  .fold-toggle--card .chevron {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    margin-top: -9px;
+  }
+  .report-card__header .collapsible__inner {
+    display: flex;
+    flex-direction: column;
+  }
+  .report-card__badge {
+    position: static;
+    align-self: center;
+    margin: 6px 0 0;
+  }
+  .report-card__subtitle {
+    position: static;
+    order: 1;
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .period {
+    position: static;
+    order: 2;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .period__label {
+    font-size: 13px;
+    line-height: normal;
+  }
+  .period__select {
+    width: 150px;
+    height: 34px;
+    padding: 0 26px 0 10px;
+    background-position: right 10px center;
+    background-size: 10px 10px;
+    border-width: 1px;
+    font-size: 14px;
+  }
+  .report-card--collapsed .report-card__header {
+    border-bottom-color: transparent;
+  }
+  .report-card__row {
+    height: auto;
+    min-height: 46px;
+  }
+  .report-card__cell {
+    padding: 8px 6px;
+    font-size: 13px;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .report-card__row--head .report-card__cell {
+    font-size: 12px;
+  }
+}
+
+/* ---------- Entry Log table, narrow ---------- */
+@media (max-width: 700px) {
+  .log-col--lines {
+    display: none;
+  }
+  .log-head,
+  .log-row {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .log-col--date {
+    width: 84px;
+  }
+  .log-col--amount {
+    width: 100px;
+  }
+  .print-panel__list--supporting {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .print-panel__list--statements {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ---------- New entry fields wrap ---------- */
+@media (max-width: 600px) {
+  /* Date and Faculty side by side, Transaction type full width below them */
+  .form-row--thirds {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .form-row--thirds .field:nth-child(2) {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .form-row--thirds .field:nth-child(3) {
+    order: 2;
+  }
+  .field--amount {
+    width: 130px;
+  }
+
+  /* each journal line: account on top, then debit, credit and the remove button under it */
+  .form-row--lines {
+    display: grid;
+    grid-template-columns: 1fr 1fr 40px;
+    grid-template-areas:
+      'acc acc acc'
+      'dr cr rm';
+    gap: 6px 10px;
+    align-items: end;
+  }
+  .form-row--lines + .form-row--lines {
+    padding-top: 12px;
+    border-top: 1px dashed var(--log-row-line);
+  }
+  .form-row--lines .field--account {
+    grid-area: acc;
+  }
+  .form-row--lines > :nth-child(2) {
+    grid-area: dr;
+  }
+  .form-row--lines > :nth-child(3) {
+    grid-area: cr;
+  }
+  .form-row--lines .field--money {
+    width: auto;
+  }
+  .form-row--lines .remove-btn {
+    grid-area: rm;
+  }
+  .form-row--lines:not(:first-child) .field__label {
+    display: block;
+  }
+
+  .form-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .form-actions .btn {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+  .form-note {
+    flex: 1 1 100%;
+    order: 5;
+    font-size: 12px;
+    line-height: 15px;
+  }
+}
+
+/* ---------- Entry Log rows as two-line cards ---------- */
+@media (max-width: 560px) {
+  .entry-log {
+    padding: 12px;
+  }
+  .log-head {
+    display: none; /* each card says what its values are */
+  }
+  .log-body {
+    height: auto;
+    max-height: 360px;
+    margin-top: 12px;
+    border-radius: var(--radius-log);
+  }
+  .log-row {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas:
+      'num date type amount'
+      'lines lines . actions';
+    align-items: center;
+    gap: 6px 10px;
+    height: auto;
+    padding: 10px 12px;
+  }
+  .log-col {
+    width: auto;
+  }
+  .log-col--num {
+    grid-area: num;
+    font-weight: 700;
+  }
+  .log-col--date {
+    grid-area: date;
+  }
+  .log-col--type {
+    grid-area: type;
+    color: var(--text-muted);
+  }
+  .log-col--amount {
+    grid-area: amount;
+    font-weight: 700;
+  }
+  .log-col--lines {
+    display: block;
+    grid-area: lines;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .log-col--actions {
+    grid-area: actions;
+    gap: 8px;
+  }
+  .row-btn {
+    height: 32px;
+    padding: 0 16px;
+  }
+  .log-row--blank {
+    display: none;
+  }
+  .log-row--empty {
+    display: flex;
+    height: 44px;
+  }
+}
+
+/* ---------- touch screens: no hover state that sticks after a tap ---------- */
+@media (hover: none) {
+  .print-btn:hover:not(:disabled) {
+    background: #fff;
+    color: var(--burgundy);
+  }
+  .print-btn--primary:hover:not(:disabled) {
+    background: var(--burgundy);
+    color: #fff;
+    filter: none;
+  }
+  .row-btn:hover {
+    background: #fff;
+    color: var(--burgundy);
+  }
+}

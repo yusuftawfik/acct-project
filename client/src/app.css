@@ -1,0 +1,697 @@
+/* Layout and component styles. Colours, fonts, radii and shadows come from tokens.css (copied from Figma). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+/* ---------- page header ---------- */
+.site-header {
+  position: relative;
+  height: 160px;
+  margin-bottom: 43px;
+}
+.site-logo {
+  position: absolute;
+  left: 20px;
+  top: 12px;
+  width: 243px;
+  height: 91px;
+  object-fit: cover;
+}
+.site-title {
+  position: absolute;
+  left: 50%;
+  top: 49px;
+  margin: 0;
+  transform: translateX(-50%);
+  font: italic 700 64px/78px var(--font-title);
+  white-space: nowrap;
+}
+.site-rule {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 157px;
+  margin: 0;
+  border: 0;
+  border-top: 5px solid var(--header-red);
+}
+
+/* ---------- page grid ---------- */
+.page {
+  width: 1300px;
+  max-width: calc(100% - 40px);
+  margin: 0 auto;
+  padding-bottom: 60px;
+}
+.top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 39px;
+}
+
+/* ---------- shared card (New entry, Entry Log) ---------- */
+.panel {
+  position: relative;
+  min-height: 475px;
+  background: var(--card-bg);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+}
+.panel__title {
+  margin: 0;
+  font: 400 16px/normal var(--font-mono);
+  color: var(--burgundy);
+}
+
+/* ---------- New entry form ---------- */
+.entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 23px;
+}
+.entry-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+}
+.form-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.form-row--thirds .field {
+  flex: 1;
+  min-width: 0;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field--amount {
+  width: 180px;
+  flex: none;
+}
+.field--grow {
+  flex: 1;
+  min-width: 0;
+}
+.field--account {
+  flex: 1 1 215px;
+  min-width: 0;
+}
+.field--money {
+  width: 159.25px;
+  flex: none;
+}
+.field__label {
+  font-size: 12px;
+  font-weight: 300;
+  line-height: normal;
+}
+.field__label--mono {
+  font: 400 16px/normal var(--font-mono);
+}
+.input {
+  position: relative;
+  width: 100%;
+  height: 27.5px;
+  padding: 0 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  font-size: 12px;
+  color: var(--text);
+}
+.input::placeholder {
+  color: var(--text);
+  opacity: 1;
+}
+.input--select {
+  appearance: none;
+  padding-right: 30px;
+  background: #fff url('./assets/icons/chevron.svg') no-repeat right 10px center / 12px 12px;
+}
+.input--date {
+  font-size: 14px;
+  background: #fff url('./assets/icons/calendar.svg') no-repeat right 8px center / 24px 24px;
+}
+.input--date::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 40px;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.remove-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 27.5px;
+  height: 27.5px;
+  padding: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  cursor: pointer;
+}
+.form-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 125.5px; /* the labelled first row plus two more; extra lines scroll */
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--burgundy-scroll) transparent;
+}
+.form-lines::-webkit-scrollbar {
+  width: 4px;
+}
+.form-lines::-webkit-scrollbar-thumb {
+  background: var(--burgundy-scroll);
+  border-radius: 100px;
+}
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-btn);
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn--outline {
+  background: #fff;
+  border: 1px solid var(--forest);
+  color: var(--forest);
+}
+.btn--post {
+  background: var(--burgundy);
+  border: 1px solid var(--burgundy);
+  color: #fff;
+}
+.btn--post:disabled {
+  background: var(--disabled-bg);
+  border-color: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.form-note {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 13px;
+}
+.form-note--ok {
+  color: var(--ok-text);
+}
+.form-note--err {
+  color: var(--burgundy);
+}
+.balance-bar {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--error-bar);
+  border-radius: var(--radius-btn);
+  color: var(--forest);
+  font-size: 14px;
+  white-space: pre;
+}
+.balance-bar--ok {
+  background: var(--ok-bg);
+}
+
+/* ---------- Entry Log ---------- */
+.entry-log__title {
+  position: absolute;
+  left: 26px;
+  top: 18px;
+}
+.log-head {
+  position: absolute;
+  left: 26px;
+  top: 60px;
+  right: 28px; /* was a fixed 589px; same result at full size, and lets the card shrink */
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 12px;
+  background: var(--header-red);
+  border: 2px solid var(--border); /* same 2px as the list below, so the side lines line up exactly */
+  border-bottom: 0;
+  border-radius: var(--radius-log) var(--radius-log) 0 0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+.log-body {
+  position: absolute;
+  left: 26px;
+  top: 92px;
+  right: 28px;
+  height: 339px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--log-body-bg);
+  border: 2px solid var(--border);
+  border-radius: 0 0 var(--radius-log) var(--radius-log);
+  box-shadow: var(--shadow-log-body);
+  font-size: 14px;
+  scrollbar-gutter: stable; /* rows keep the same width whether or not the scroll bar shows */
+  scrollbar-width: thin;
+  scrollbar-color: var(--burgundy-scroll) transparent;
+}
+.log-body::-webkit-scrollbar {
+  width: 4px;
+}
+.log-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.log-body::-webkit-scrollbar-thumb {
+  background: var(--burgundy-scroll);
+  border-radius: 100px;
+}
+.log-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 34px;
+  padding: 0 18px;
+  background: #fff;
+  border-bottom: 1px solid var(--log-row-line);
+}
+.log-row:nth-child(even) {
+  background: var(--log-row-alt);
+}
+.log-row--editing,
+.log-row--editing:nth-child(even) {
+  background: rgba(150, 0, 2, 0.1);
+}
+.log-row--new,
+.log-row--new:nth-child(even) {
+  background: var(--ok-bg);
+}
+.log-tip {
+  position: fixed;
+  z-index: 20;
+  max-width: 290px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-print-btn);
+  box-shadow: var(--shadow-dashboard);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: pre-line;
+  pointer-events: none;
+}
+.log-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.log-col {
+  flex: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.log-col--num {
+  width: 52px;
+}
+.log-col--date {
+  width: 88px;
+}
+.log-col--type {
+  width: 56px;
+}
+.log-col--lines {
+  width: 60px;
+}
+.log-col--amount {
+  width: 110px;
+  text-align: right;
+}
+.log-col--actions {
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  overflow: visible;
+}
+.row-btn {
+  height: 22px;
+  padding: 0 8px;
+  background: #fff;
+  border: 1px solid var(--burgundy);
+  border-radius: var(--radius-print-btn);
+  color: var(--burgundy);
+  font-size: 12px;
+  cursor: pointer;
+}
+.row-btn:hover {
+  background: var(--burgundy);
+  color: #fff;
+}
+
+/* ---------- Dashboard ---------- */
+.dashboard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-dashboard);
+  padding: 11px 32px 32px;
+}
+.dashboard__title {
+  display: inline-block;
+  margin: 0 0 36px 28px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font: 700 20px/21px var(--font-mono);
+  color: var(--burgundy);
+}
+.dashboard__body {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+}
+.dashboard__cards {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+/* ---------- report card ---------- */
+.report-card {
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.report-card__header {
+  position: relative;
+  height: 82px;
+  border-bottom: 1px solid var(--border);
+}
+.report-card__title {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  right: 15px;
+  margin: 0;
+  font: 700 24px/normal var(--font-body);
+  text-align: center;
+}
+.report-card__subtitle {
+  position: absolute;
+  top: 48px;
+  left: 15px;
+  right: 15px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+}
+.period {
+  position: absolute;
+  left: 11px;
+  top: 6px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.period__label {
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 12px;
+}
+.period__select {
+  width: 129px;
+  height: 15px;
+  padding: 0 14px 0 3px;
+  appearance: none;
+  background: var(--select-bg) url('./assets/icons/chevron.svg') no-repeat right 5px center / 8px 8px;
+  border: 0.1px solid var(--border);
+  border-radius: var(--radius-input);
+  font-size: 12px;
+  line-height: 13px;
+  color: var(--text);
+}
+.report-card__row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  height: 44px;
+}
+.report-card__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.report-card__row--head {
+  background: var(--burgundy);
+  color: #fff;
+}
+.report-card__row--head .report-card__cell {
+  font-weight: 700;
+}
+.report-card__row--head .report-card__cell:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+.report-card__row--data {
+  background: #fff;
+  color: var(--text-muted);
+}
+.report-card__row--data .report-card__cell:not(:last-child) {
+  border-right: 1px solid var(--col-divider);
+}
+
+/* ---------- Print Reports panel ---------- */
+.print-panel {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 210px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.print-panel__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 12px 12px;
+  white-space: nowrap;
+}
+.print-panel__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+.print-panel__subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.print-panel__group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 10px 12px;
+  background: var(--burgundy);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.print-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+}
+.print-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  background: #fff;
+  border: 1.5px solid var(--burgundy);
+  border-radius: var(--radius-print-btn);
+  color: var(--burgundy);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.print-btn--primary {
+  background: var(--burgundy);
+  color: #fff;
+}
+.print-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.print-btn {
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* hover: fill with the burgundy (the filled primary button just darkens a little) */
+.print-btn:hover:not(:disabled) {
+  background: var(--burgundy);
+  color: #fff;
+}
+.print-btn--primary:hover:not(:disabled) {
+  filter: brightness(0.88);
+}
+/* click: pops out while pressed and springs back */
+.print-btn:active:not(:disabled) {
+  transform: scale(1.06);
+  transition-duration: 0.08s;
+}
+.print-btn:focus-visible {
+  outline: 2px solid var(--burgundy);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .print-btn,
+  .print-btn:active:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* ---------- live dashboard states (new elements only; existing styles unchanged) ---------- */
+.report-card__badge {
+  position: absolute;
+  top: 8px;
+  right: 11px;
+  z-index: 1;
+  padding: 2px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.report-card__badge--bad {
+  background: var(--burgundy);
+  color: #fff;
+}
+.print-panel__error {
+  margin: 0;
+  padding: 0 12px 12px;
+  color: var(--burgundy);
+  font-size: 11px;
+  line-height: 13px;
+  white-space: pre-line;
+}
+
+/* ---------- in-page dialogs and notices (replace the browser's confirm / alert / prompt) ---------- */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+.dialog {
+  width: 380px;
+  max-width: calc(100% - 40px);
+  padding: 20px 24px 22px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-dashboard);
+}
+.dialog__title {
+  margin-bottom: 12px;
+}
+.dialog__text {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+.notice {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(460px, calc(100% - 40px));
+  padding: 10px 14px;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid var(--burgundy);
+  border-radius: var(--radius-print-btn);
+  box-shadow: var(--shadow-dashboard);
+  color: var(--burgundy);
+  font-size: 13px;
+  line-height: 17px;
+}
+.notice__text {
+  white-space: pre-line;
+}
+.dialog .btn:focus-visible {
+  outline: 2px solid var(--burgundy);
+  outline-offset: 2px;
+}
+.btn--outline:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

@@ -1,0 +1,32 @@
+AccountID,AccountName,Type,NormalBalance,StatementLine,FacultyTag,CashFlowLine,PresentationSign,SortOrder
+1010,Cash at bank,Asset,Debit,Current assets,No,(cash account),1,1
+1100,Fees receivable,Asset,Debit,Current assets,No,Received from students,1,2
+1110,Other receivables,Asset,Debit,Current assets,No,Received from services,1,3
+1200,Inventory: bookstore,Asset,Debit,Current assets,No,Paid to suppliers,1,4
+1210,Inventory: cafeteria,Asset,Debit,Current assets,No,Paid to suppliers,1,5
+1220,Inventory: lab and office supplies,Asset,Debit,Current assets,No,Paid to suppliers,1,6
+1500,Land and buildings,Asset,Debit,Non-current assets,No,Paid for assets,1,7
+1510,Lab and IT equipment,Asset,Debit,Non-current assets,No,Paid for assets,1,8
+1520,Furniture and fittings,Asset,Debit,Non-current assets,No,Paid for assets,1,9
+1530,Vehicles,Asset,Debit,Non-current assets,No,Paid for assets,1,10
+2010,Accounts payable,Liability,Credit,Current liabilities,No,Paid to suppliers,-1,11
+2020,Salaries payable,Liability,Credit,Current liabilities,No,Paid to employees,-1,12
+2030,Income tax payable,Liability,Credit,Current liabilities,No,Paid for income tax,-1,13
+3010,Owner's capital,Equity,Credit,Owner's equity,No,Owner investment,-1,14
+3020,Owner's drawings,Equity,Debit,Owner's equity (deduction),No,Owner drawings,-1,15
+4010,Tuition fees,Revenue,Credit,Revenue,Yes,Received from students,-1,16
+4020,Application and registration fees,Revenue,Credit,Revenue,No,Received from students,-1,17
+4030,Bookstore sales,Revenue,Credit,Revenue,No,Received from sales,-1,18
+4040,Cafeteria sales,Revenue,Credit,Revenue,No,Received from sales,-1,19
+4050,Training and consulting services,Revenue,Credit,Revenue,Yes,Received from services,-1,20
+4060,Facility rental income,Revenue,Credit,Revenue,No,Received from services,-1,21
+5010,Academic salaries,Expense,Debit,Operating expenses,Yes,Paid to employees,1,22
+5020,Administrative salaries,Expense,Debit,Operating expenses,No,Paid to employees,1,23
+5030,Cost of sales: bookstore,Expense,Debit,Operating expenses,No,Non-cash,1,24
+5040,Cost of sales: cafeteria,Expense,Debit,Operating expenses,No,Non-cash,1,25
+5050,Lab and office supplies used,Expense,Debit,Operating expenses,No,Non-cash,1,26
+5060,Utilities,Expense,Debit,Operating expenses,No,Paid to suppliers,1,27
+5070,Marketing and admissions,Expense,Debit,Operating expenses,No,Paid to suppliers,1,28
+5080,Repairs and maintenance,Expense,Debit,Operating expenses,No,Paid to suppliers,1,29
+5090,Scholarships and discounts,Expense,Debit,Operating expenses,Yes,Paid to students,1,30
+5900,Income tax expense,Expense,Debit,Income tax,No,Paid for income tax,1,31

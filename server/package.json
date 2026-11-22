@@ -1,0 +1,19 @@
+{
+  "name": "cic-journal-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CIC financial journal API (Node port of the Python backend)",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "express": "^4.21.2"
+  }
+}

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CIC Journal</title>
+<style>
+:root{--b:#1f3864;--g:#2e7d32;--r:#c62828;--bg:#f4f6fa;--m:#667}
+*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:#222}
+header{background:var(--b);color:#fff;padding:12px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;flex:1}header a{color:#fff}
+main{max-width:1100px;margin:16px auto;padding:0 12px;display:grid;gap:16px}
+.card{background:#fff;border-radius:8px;padding:14px;box-shadow:0 1px 3px #0002}
+h2{font-size:15px;margin:0 0 10px;color:var(--b)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.kpi{background:var(--bg);border-radius:6px;padding:8px}.kpi b{display:block;font-size:16px}.kpi span{color:var(--m);font-size:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--m);gap:2px;flex:1;min-width:140px}
+input,select,button{font:inherit;padding:6px 8px;border:1px solid #bbc;border-radius:5px}
+button{background:var(--b);color:#fff;border:0;cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}
+button.s{background:#fff;color:var(--b);border:1px solid var(--b)}button.d{background:var(--r)}
+table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1px solid #e3e6ee;text-align:left}
+th{font-size:12px;color:var(--m)}.n{text-align:right}td.n input{text-align:right;width:120px}
+.meter{padding:8px;border-radius:6px;font-weight:600;margin:8px 0}.ok{background:#e3f4e4;color:var(--g)}.bad{background:#fde8e8;color:var(--r)}
+#msg{white-space:pre-line}.err{color:var(--r)}.good{color:var(--g)}.w{overflow-x:auto}
+</style></head><body>
+<header><h1>Canadian International College · Journal</h1><span id="st">connecting…</span>
+<label style="flex:none;color:#cfd8ee">API key<input id="key" type="password" placeholder="only if set on server" style="width:150px"></label>
+<a href="/journal.csv">Download journal CSV</a></header>
+<main>
+<section class="card"><h2>Dashboard</h2>
+<div class="row"><label style="max-width:200px">Report through<select id="thru"></select></label></div>
+<div class="kpis" id="kpis"></div></section>
+<section class="card"><h2 id="ft">New entry</h2>
+<div class="row">
+<label>Date<input id="date" type="date"></label>
+<label>Transaction type<select id="type"></select></label>
+<label>Faculty (for BA/BT/CS accounts)<select id="fac"><option value="">none</option><option>BA</option><option>BT</option><option>CS</option></select></label>
+<label>Amount (fills a simple 2-line entry)<input id="amt" type="number" min="0" step="0.01"></label></div>
+<div class="row"><label>Description<input id="desc" maxlength="120"></label></div>
+<div id="hint" style="color:var(--m);font-size:12px;margin-bottom:6px"></div>
+<div class="w"><table><thead><tr><th>Account</th><th class="n">Debit</th><th class="n">Credit</th><th></th></tr></thead><tbody id="lines"></tbody></table></div>
+<div class="row" style="margin-top:8px"><button class="s" id="addl">+ Add line</button><button class="s" id="tax">Suggest tax entry</button></div>
+<div id="meter" class="meter bad"></div>
+<div class="row"><button id="post">Post entry</button><button class="s" id="clear">Clear</button></div>
+<div id="msg"></div></section>
+<section class="card"><h2>Entries</h2><div class="w"><table><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Description</th><th>Lines</th><th class="n">Amount</th><th></th></tr></thead><tbody id="ents"></tbody></table></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const f2=n=>(+n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const eid=n=>'E'+String(n).padStart(4,'0');
+let ACC=[],TPL=[],FY='',ENTS=[],editing=null,MONTHS=[];
+$('key').value=localStorage.getItem('cickey')||'';
+$('key').onchange=()=>localStorage.setItem('cickey',$('key').value);
+async function api(path,opt={}){
+  const h={'Content-Type':'application/json'},k=$('key').value;if(k)h['X-API-Key']=k;
+  const r=await fetch(path,{...opt,headers:h});let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(((j&&j.errors)||['Request failed ('+r.status+')']).join('\n'));
+  return j}
+function show(t,c){const m=$('msg');m.textContent=t;m.className=c||''}
+function months(){const [y,m]=FY.split('-').map(Number);return Array.from({length:12},(_,i)=>{const d=new Date(y,m-1+i,1);
+  return{v:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),t:d.toLocaleString('en',{month:'short',year:'numeric'})}})}
+async function dash(){
+  const s=await api('/api/summary?through='+$('thru').value);
+  const k=[['Cash',s.cash],['Assets',s.assets],['Liabilities',s.liabilities],['Equity',s.equity],['Profit before tax',s.profit_before_tax],['Income tax',s.income_tax],['Net income',s.net_income]];
+  $('kpis').innerHTML=k.map(([a,b])=>`<div class="kpi"><span>${a}</span><b>${f2(b)}</b></div>`).join('')+
+   `<div class="kpi"><span>Accounting equation</span><b class="${s.balanced?'good':'err'}">${s.balanced?'Balanced ✓':'Off by '+f2(s.balance_difference)}</b></div>`}
+async function list(){
+  ENTS=await api('/api/entries');
+  $('ents').innerHTML=ENTS.map(e=>`<tr><td>${eid(e.id)}</td><td>${e.date}</td><td>${e.txn_type}</td><td>${esc(e.description)}</td><td>${e.lines.map(l=>(l.debit?'Dr ':'Cr ')+l.account_id+' '+f2(l.debit||l.credit)).join('<br>')}</td><td class="n">${f2(e.total)}</td><td><button class="s" data-e="${e.id}">Edit</button> <button class="d" data-x="${e.id}">Delete</button></td></tr>`).join('')||'<tr><td colspan="7">No entries yet. Post your first one above.</td></tr>'}
+const refresh=()=>Promise.all([list(),dash()]);
+function lineRow(l={}){
+  const tr=document.createElement('tr');tr.dataset.side='debit' in l?'dr':'credit' in l?'cr':'';
+  tr.innerHTML=`<td><select class="a"><option value="">Choose account…</option>${ACC.map(a=>`<option value="${a.id}">${a.id} · ${esc(a.name)}</option>`).join('')}</select></td><td class="n"><input class="dr" type="number" min="0" step="0.01" value="${l.debit||''}"></td><td class="n"><input class="cr" type="number" min="0" step="0.01" value="${l.credit||''}"></td><td><button class="s x">✕</button></td>`;
+  tr.querySelector('.a').value=l.account_id||'';tr.oninput=meter;
+  tr.querySelector('.x').onclick=()=>{tr.remove();meter()};$('lines').appendChild(tr)}
+const readLines=()=>[...$('lines').children].map(tr=>({account_id:+tr.querySelector('.a').value||null,debit:+tr.querySelector('.dr').value||0,credit:+tr.querySelector('.cr').value||0})).filter(l=>l.account_id||l.debit||l.credit);
+function meter(){
+  const L=readLines(),dr=L.reduce((s,l)=>s+l.debit,0),cr=L.reduce((s,l)=>s+l.credit,0),d=Math.round((dr-cr)*100)/100,bal=d===0&&dr>0;
+  $('meter').className='meter '+(bal?'ok':'bad');
+  $('meter').textContent=`Debits ${f2(dr)} · Credits ${f2(cr)} · `+(bal?'Balanced':'Difference '+f2(Math.abs(d)));
+  $('post').disabled=!(bal&&L.length>=2&&$('date').value&&L.every(l=>l.account_id))}
+function fillAmt(){const a=$('amt').value,R=[...$('lines').children],D=R.filter(r=>r.dataset.side=='dr'),C=R.filter(r=>r.dataset.side=='cr');
+  if(D.length==1&&C.length==1){D[0].querySelector('.dr').value=a;C[0].querySelector('.cr').value=a}}
+function applyTpl(){
+  const t=TPL.find(x=>x.code==$('type').value);$('lines').innerHTML='';
+  if(!t||t.code=='Custom'){lineRow();lineRow();$('hint').textContent=t?'Custom: choose any accounts, as many lines as you need.':'';meter();return}
+  const side=(txt,k)=>(txt.includes('+')?txt.match(/\d{4}/g):/^\d{4}$/.test(txt)?[txt]:[null]).map(i=>({account_id:i?+i:null,[k]:0}));
+  [...side(t.debit,'debit'),...side(t.credit,'credit')].forEach(lineRow);
+  $('hint').textContent=`${t.name}: suggested Dr ${t.debit} / Cr ${t.credit}`+(/[\/x]/.test(t.debit+t.credit)?'. Choose the specific account where a line is blank.':'');
+  fillAmt();meter()}
+function reset(keepDate){editing=null;$('ft').textContent='New entry';$('post').textContent='Post entry';
+  $('desc').value='';$('amt').value='';$('fac').value='';if(!keepDate)$('date').value='';$('type').value='';applyTpl()}
+$('post').onclick=async()=>{
+  const body={date:$('date').value,txn_type:$('type').value||'Custom',description:$('desc').value,faculty:$('fac').value,lines:readLines()};
+  try{await api(editing?'/api/entries/'+editing:'/api/entries',{method:editing?'PUT':'POST',body:JSON.stringify(body)});
+    show(editing?'Entry updated.':'Entry posted.','good');reset(true);await refresh()}catch(e){show(e.message,'err')}};
+$('ents').onclick=async e=>{
+  const ed=e.target.dataset.e,dl=e.target.dataset.x;
+  if(ed){const x=ENTS.find(y=>y.id==ed);editing=x.id;$('ft').textContent='Edit entry '+eid(x.id);$('post').textContent='Save changes';
+    $('date').value=x.date;$('type').value=x.txn_type;$('desc').value=x.description;$('lines').innerHTML='';
+    x.lines.forEach(l=>lineRow({account_id:l.account_id,debit:l.debit,credit:l.credit}));
+    const f=x.lines.find(l=>l.faculty&&l.faculty!='Central');$('fac').value=f?f.faculty:'';
+    $('hint').textContent='';show('');meter();scrollTo({top:0,behavior:'smooth'})}
+  if(dl&&confirm('Delete entry '+eid(dl)+'?')){try{await api('/api/entries/'+dl,{method:'DELETE'});show('Entry deleted.','good');await refresh()}catch(x){show(x.message,'err')}}};
+$('tax').onclick=async()=>{
+  const mo=($('date').value||'').slice(0,7)||$('thru').value;
+  try{const t=await api('/api/tax/suggest?month='+mo);
+    if(!t.proposal){show(`Tax for ${mo} is up to date (required to date ${f2(t.tax_required_ytd)}).`,'good');return}
+    editing=null;$('ft').textContent='New entry';$('post').textContent='Post entry';
+    $('type').value='T28';$('date').value=t.period_end;$('desc').value='Monthly income tax accrual';$('fac').value='';$('lines').innerHTML='';
+    t.proposal.forEach(l=>lineRow({account_id:l.account_id,debit:l.debit,credit:l.credit}));meter();
+    show(`Profit before tax to date ${f2(t.profit_before_tax_ytd)} × ${(t.rate*100).toFixed(1)}% = ${f2(t.tax_required_ytd)}. Recorded in earlier months: ${f2(t.recorded_before_this_month)}, this month: ${f2(t.recorded_this_month)}. Entry to post now: ${f2(t.to_post)}. Review it, then post.`)
+  }catch(e){show(e.message,'err')}};
+$('addl').onclick=()=>{lineRow();meter()};$('clear').onclick=()=>{reset();show('')};
+$('type').onchange=applyTpl;$('amt').oninput=()=>{fillAmt();meter()};$('date').oninput=meter;$('thru').onchange=dash;
+(async()=>{try{
+  const h=await api('/api/health');FY=h.financial_year_start;MONTHS=months();
+  $('st').textContent='● connected'+(h.writes_protected?' · API key required':'');
+  [ACC,TPL]=await Promise.all([api('/api/accounts'),api('/api/templates')]);
+  $('type').innerHTML='<option value="">choose a template…</option>'+TPL.map(t=>`<option value="${t.code}">${t.code} · ${esc(t.name)}</option>`).join('');
+  $('thru').innerHTML=MONTHS.map(m=>`<option value="${m.v}">${m.t}</option>`).join('');$('thru').value=MONTHS[11].v;
+  $('date').min=MONTHS[0].v+'-01';reset();await refresh()
+}catch(e){$('st').textContent='● cannot reach the API';show(e.message,'err')}})();
+</script></body></html>

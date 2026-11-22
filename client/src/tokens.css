@@ -1,0 +1,44 @@
+/* Design tokens. Every value comes from the Figma file TABJwJmuvkNYfJUhodeS2H (frame "Frame 1").
+   The Excel redesign reuses these, so change them here only. See design/NOTES.md. */
+:root {
+  /* colours */
+  --burgundy: #960002;          /* table header rows, filled buttons, outlined buttons, section titles */
+  --burgundy-scroll: #960003;   /* scroll bar thumb */
+  --header-red: #c31b1e;        /* page header rule, Entry Log header bar */
+  --text: #000000;
+  --text-muted: #444444;        /* subtitles, data cells */
+  --forest: #12331a;            /* form buttons (Add line, Clear ...) and the balance bar text */
+  --page-bg: #f4f6fa;
+  --card-bg: #ffffff;
+  --border-soft: #e8eaee;       /* outer card borders */
+  --border: #000000;
+  --col-divider: #bdbdbd;       /* column dividers in data rows */
+  --select-bg: #d9d9d9;         /* "Report through" dropdown */
+  --error-bar: rgba(178, 9, 9, 0.24);      /* balance bar when not balanced */
+  --disabled-bg: rgba(68, 68, 68, 0.2);    /* disabled Post entry */
+  --log-body-bg: rgba(224, 201, 166, 0.65);
+  --log-row-alt: #f9f5ee;
+  --log-row-line: #dbd4c9;
+
+  /* not in the Figma file: choices made in code (see design/NOTES.md) */
+  --ok-bg: #e4f7e7;             /* balanced state: bar background and the "Balanced" pill */
+  --ok-border: #339e4d;
+  --ok-text: #1a7333;
+
+  /* fonts */
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-title: 'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', cursive;
+
+  /* radii */
+  --radius-card: 15px;
+  --radius-input: 2px;
+  --radius-btn: 5px;
+  --radius-print-btn: 4px;
+  --radius-log: 10px;
+
+  /* shadows */
+  --shadow-panel: 0 5px 20px rgba(0, 0, 0, 0.25);   /* New entry and Entry Log cards */
+  --shadow-dashboard: 0 1px 4px rgba(0, 0, 0, 0.25);
+  --shadow-log-body: 0 4px 4px rgba(0, 0, 0, 0.25);
+}
