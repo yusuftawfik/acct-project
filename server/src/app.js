@@ -1,5 +1,6 @@
 // CIC journal API (Express). Same endpoints as the Python version.
 import { existsSync, mkdirSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
@@ -9,6 +10,8 @@ import { createReports } from './reports.js';
 import { buildYear, countYear } from '../scripts/seed-sample-year.js';
 
 const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// On Vercel the deployed files are read-only (only the temp folder is writable) and there is no Excel.
+const onVercel = Boolean(process.env.VERCEL);
 
 const FEED_COLS = ['EntryID', 'Date', 'TxnType', 'AccountID', 'Debit', 'Credit', 'Faculty', 'Description'];
 
@@ -33,12 +36,15 @@ const apiLine = (l) => ({
  */
 export function createApp(config = {}) {
   const settings = {
-    database: config.database ?? process.env.CIC_DATABASE ?? path.join(serverRoot, 'data', 'cic.db'),
+    database:
+      config.database ??
+      process.env.CIC_DATABASE ??
+      (onVercel ? path.join(os.tmpdir(), 'cic.db') : path.join(serverRoot, 'data', 'cic.db')),
     apiKey: config.apiKey ?? process.env.CIC_API_KEY ?? '', // empty = writes unprotected (development only)
     fyStart: config.fyStart ?? process.env.CIC_FY_START ?? '2026-07-01',
     taxRate: Number(config.taxRate ?? process.env.CIC_TAX_RATE ?? '0.225'),
     // 'live' runs Excel to make the PDF reports; 'static' only serves the PDFs already in excel/exports.
-    exportMode: config.exportMode ?? process.env.EXCEL_EXPORT_MODE ?? 'live',
+    exportMode: config.exportMode ?? process.env.EXCEL_EXPORT_MODE ?? (onVercel ? 'static' : 'live'),
     excelPath: config.excelPath ?? process.env.EXCEL_PATH ?? path.resolve(serverRoot, '..', 'excel', 'CIC_Financial_Model_v2.xlsx'),
     exportsDir: config.exportsDir ?? path.resolve(serverRoot, '..', 'excel', 'exports'),
     // Quiet time (ms) after a journal change before Excel makes the PDFs in the background. 0 = only when asked.
