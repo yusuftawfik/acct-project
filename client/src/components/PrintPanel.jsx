@@ -53,7 +53,7 @@ export default function PrintPanel({ onPrint, busySlug, error }) {
     <aside className="print-panel" aria-label="Print Reports">
       <div className="print-panel__header">
         <p className="print-panel__title">Print Reports</p>
-        <p className="print-panel__subtitle">From the Excel model</p>
+        <p className="print-panel__subtitle">From your journal</p>
       </div>
       <PrintGroup
         title="Financial statements"

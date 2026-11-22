@@ -74,7 +74,9 @@ export default function Dashboard({ ready, fyStart, defaultMonth, version }) {
     setBusySlug(slug);
     setPrintError('');
     try {
-      const blob = await apiBlob(`/api/reports/${slug}.pdf`);
+      // Reports cover the journal through the latest month that has entries (the same month the cards start on).
+      const through = defaultMonth ? `?through=${encodeURIComponent(defaultMonth)}` : '';
+      const blob = await apiBlob(`/api/reports/${slug}.pdf${through}`);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
