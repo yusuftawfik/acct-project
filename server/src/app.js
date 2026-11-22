@@ -1,5 +1,6 @@
-// CIC journal API (Express). Same endpoints as the Python version.
-import { existsSync, mkdirSync } from 'node:fs';
+// CIC journal API (Express). Same endpoints as the Python version, plus per-visitor journals and PDF reports
+// that are generated in code (so the hosted site needs neither Excel nor a Windows computer).
+import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +8,8 @@ import express from 'express';
 import * as core from './core.js';
 import { openDb } from './db.js';
 import { createReports } from './reports.js';
+import { REPORT_SLUGS, docsFor } from './reportDocs.js';
+import { buildReport } from './statements.js';
 import { buildYear, countYear } from '../scripts/seed-sample-year.js';
 
 const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -14,6 +17,10 @@ const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 const onVercel = Boolean(process.env.VERCEL);
 
 const FEED_COLS = ['EntryID', 'Date', 'TxnType', 'AccountID', 'Debit', 'Credit', 'Faculty', 'Description'];
+
+// A visitor's journal id: a long random string made by the browser. Whoever knows it can see that journal.
+const OWNER_RE = /^[A-Za-z0-9_-]{16,64}$/;
+const MAX_LINES_PER_ENTRY = 50;
 
 const csvCell = (v) => {
   const s = String(v);
@@ -28,42 +35,50 @@ const apiLine = (l) => ({
   faculty: l.faculty,
 });
 
+// Express 4 does not catch errors thrown inside async handlers; this passes them on to the error handler below.
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
 /**
- * config (all optional): database, apiKey, fyStart ('YYYY-MM-DD'), taxRate (e.g. 0.225),
- * exportMode ('live' | 'static'), excelPath, exportsDir, exportTimeoutMs, exportRunner (tests only)
- * Defaults come from the environment: CIC_DATABASE, CIC_API_KEY, CIC_FY_START, CIC_TAX_RATE,
- * EXCEL_EXPORT_MODE, EXCEL_PATH.
+ * config (all optional): database (SQLite file), databaseUrl (PostgreSQL), apiKey, fyStart ('YYYY-MM-DD'),
+ * taxRate (e.g. 0.225), exportMode ('live' | 'static' | 'generated'), excelPath, exportsDir, exportTimeoutMs,
+ * exportRunner (tests only), multiUser, maxLines, entity, currency.
+ * Defaults come from the environment: DATABASE_URL (or POSTGRES_URL), CIC_DATABASE, CIC_API_KEY, CIC_FY_START,
+ * CIC_TAX_RATE, EXCEL_EXPORT_MODE, EXCEL_PATH, CIC_MAX_LINES, CIC_ENTITY, CIC_CURRENCY.
  */
 export function createApp(config = {}) {
   const settings = {
+    databaseUrl: config.databaseUrl ?? process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? '',
     database:
       config.database ??
       process.env.CIC_DATABASE ??
       (onVercel ? path.join(os.tmpdir(), 'cic.db') : path.join(serverRoot, 'data', 'cic.db')),
-    apiKey: config.apiKey ?? process.env.CIC_API_KEY ?? '', // empty = writes unprotected (development only)
+    apiKey: config.apiKey ?? process.env.CIC_API_KEY ?? '', // empty = writes unprotected
     fyStart: config.fyStart ?? process.env.CIC_FY_START ?? '2026-07-01',
     taxRate: Number(config.taxRate ?? process.env.CIC_TAX_RATE ?? '0.225'),
-    // 'live' runs Excel to make the PDF reports; 'static' only serves the PDFs already in excel/exports.
-    exportMode: config.exportMode ?? process.env.EXCEL_EXPORT_MODE ?? (onVercel ? 'static' : 'live'),
+    entity: config.entity ?? process.env.CIC_ENTITY ?? 'Canadian International College (CIC)',
+    currency: config.currency ?? process.env.CIC_CURRENCY ?? 'EGP',
+    // 'live' runs Excel to make the PDF reports; 'static' only serves the PDFs already in excel/exports;
+    // 'generated' draws the PDFs in code from the visitor's own journal (used on the hosted site).
+    exportMode: config.exportMode ?? process.env.EXCEL_EXPORT_MODE ?? (onVercel ? 'generated' : 'live'),
     excelPath: config.excelPath ?? process.env.EXCEL_PATH ?? path.resolve(serverRoot, '..', 'excel', 'CIC_Financial_Model_v2.xlsx'),
-    // On Vercel the PDFs must live inside server/ so they are deployed with the function (excel/ is outside it).
-    exportsDir:
-      config.exportsDir ?? (onVercel ? path.resolve(serverRoot, 'exports') : path.resolve(serverRoot, '..', 'excel', 'exports')),
+    exportsDir: config.exportsDir ?? path.resolve(serverRoot, '..', 'excel', 'exports'),
     // Quiet time (ms) after a journal change before Excel makes the PDFs in the background. 0 = only when asked.
     prewarmMs: Number(config.prewarmMs ?? process.env.EXCEL_PREWARM_MS ?? 0),
+    // On the hosted site every request must say whose journal it is. On your own computer it may leave this out.
+    multiUser: config.multiUser ?? (Boolean(config.databaseUrl ?? process.env.DATABASE_URL ?? process.env.POSTGRES_URL) || onVercel),
+    maxLines: Number(config.maxLines ?? process.env.CIC_MAX_LINES ?? 2000), // per visitor, same as the Excel Journal sheet
   };
   const fyStart = core.parseIsoDate(settings.fyStart);
   if (!fyStart) throw new Error(`CIC_FY_START must be YYYY-MM-DD, got '${settings.fyStart}'.`);
   if (!Number.isFinite(settings.taxRate) || settings.taxRate < 0) throw new Error('CIC_TAX_RATE must be a number >= 0.');
-  if (!['live', 'static'].includes(settings.exportMode)) {
-    throw new Error(`EXCEL_EXPORT_MODE must be 'live' or 'static', got '${settings.exportMode}'.`);
+  if (!['live', 'static', 'generated'].includes(settings.exportMode)) {
+    throw new Error(`EXCEL_EXPORT_MODE must be 'live', 'static' or 'generated', got '${settings.exportMode}'.`);
   }
 
-  mkdirSync(path.dirname(settings.database), { recursive: true });
-  const db = openDb(settings.database);
+  const db = openDb({ sqlitePath: settings.database, databaseUrl: settings.databaseUrl });
 
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: '200kb' }));
 
   const protectedRoute = (req, res, next) => {
     if (settings.apiKey && req.get('X-API-Key') !== settings.apiKey) {
@@ -72,11 +87,26 @@ export function createApp(config = {}) {
     next();
   };
 
-  // ---------- Excel PDF reports (see reports.js) ----------
+  // Finds whose journal a request is about: the X-Journal-Id header, or ?journal= for tools that cannot send headers
+  // (the Excel and Power BI feed). On your own computer (not multiUser) there is one journal, 'local'.
+  const needOwner = (req, res, next) => {
+    if (!settings.multiUser) {
+      req.owner = 'local';
+      return next();
+    }
+    const given = req.get('X-Journal-Id') ?? (typeof req.query.journal === 'string' ? req.query.journal : '');
+    if (!OWNER_RE.test(given)) {
+      return res.status(400).json({ errors: ['Missing or invalid journal id (X-Journal-Id).'] });
+    }
+    req.owner = given;
+    next();
+  };
+
+  // ---------- PDF reports ----------
   const reports = createReports({
     database: settings.database,
     exportsDir: settings.exportsDir,
-    exportMode: settings.exportMode,
+    exportMode: settings.exportMode === 'generated' ? 'static' : settings.exportMode,
     excelPath: settings.excelPath,
     script: path.join(serverRoot, 'scripts', 'export-excel.ps1'),
     timeoutMs: config.exportTimeoutMs,
@@ -84,14 +114,80 @@ export function createApp(config = {}) {
     runner: config.exportRunner,
     protectedRoute,
   });
-  app.use('/api/reports', reports.router);
 
-  // ---------- pages (the front end build goes in server/public) ----------
+  if (settings.exportMode === 'generated') {
+    const generated = express.Router();
+    const monthsWithData = (lines) => {
+      let latest = 1;
+      for (const l of lines) {
+        const d = core.parseIsoDate(l.date);
+        const fm = d ? core.fiscalMonth(d, fyStart) : null;
+        if (fm !== null && fm > latest) latest = fm;
+      }
+      return latest;
+    };
+
+    generated.get(
+      '/',
+      wrap(async (_req, res) => {
+        res.json({
+          mode: 'generated',
+          running: false,
+          last_run: null,
+          reports: REPORT_SLUGS.map((slug) => ({ slug, available: true, exported_at: null, stale: false })),
+        });
+      }),
+    );
+    generated.post('/refresh', (_req, res) =>
+      res.status(409).json({ errors: ['Reports are drawn from your journal each time you open one; there is nothing to refresh.'] }),
+    );
+    generated.get(
+      /^\/([a-z-]+)\.pdf$/,
+      needOwner,
+      wrap(async (req, res) => {
+        const slug = req.params[0];
+        if (!REPORT_SLUGS.includes(slug)) return res.status(404).json({ errors: [`Unknown report '${slug}'.`] });
+
+        const lines = await db.flatLines(req.owner);
+        const raw = req.query.through;
+        const through = raw === undefined || raw === '' ? monthsWithData(lines) : core.parseMonth(raw, fyStart);
+        if (through === null) {
+          return res.status(422).json({ errors: ["'through' must be YYYY-MM inside the financial year, or 1 to 12."] });
+        }
+        const report = buildReport(lines, fyStart, through, {
+          taxRate: settings.taxRate,
+          entity: settings.entity,
+          currency: settings.currency,
+        });
+        const { renderPdf } = await import('./pdf.js'); // loaded only when a PDF is asked for
+        const bytes = await renderPdf(docsFor(slug, report), { title: `${settings.entity} - ${slug}` });
+        res
+          .status(200)
+          .set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${slug}.pdf"`,
+            'Cache-Control': 'no-store',
+          })
+          .send(Buffer.from(bytes));
+      }),
+    );
+    app.use('/api/reports', generated);
+  } else {
+    app.use('/api/reports', reports.router);
+  }
+
+  // ---------- pages (the front end build goes in server/public when the Node server serves the site) ----------
   const publicDir = path.join(serverRoot, 'public');
   if (existsSync(publicDir)) app.use(express.static(publicDir));
 
   app.get('/api/health', (_req, res) =>
-    res.json({ status: 'ok', financial_year_start: settings.fyStart, writes_protected: Boolean(settings.apiKey) }),
+    res.json({
+      status: 'ok',
+      financial_year_start: settings.fyStart,
+      writes_protected: Boolean(settings.apiKey),
+      storage: settings.databaseUrl ? 'postgres' : 'sqlite',
+      reports: settings.exportMode,
+    }),
   );
 
   // ---------- reference data ----------
@@ -104,17 +200,22 @@ export function createApp(config = {}) {
   );
 
   // ---------- entries ----------
-  app.get('/api/entries', (_req, res) =>
-    res.json(
-      db.entriesWithLines().map((e) => ({
-        id: e.id,
-        date: e.date,
-        txn_type: e.txn_type,
-        description: e.description,
-        lines: e.lines.map(apiLine),
-        total: core.toMoney(e.total_cents),
-      })),
-    ),
+  app.get(
+    '/api/entries',
+    needOwner,
+    wrap(async (req, res) => {
+      const entries = await db.entriesWithLines(req.owner);
+      res.json(
+        entries.map((e) => ({
+          id: e.id,
+          date: e.date,
+          txn_type: e.txn_type,
+          description: e.description,
+          lines: e.lines.map(apiLine),
+          total: core.toMoney(e.total_cents),
+        })),
+      );
+    }),
   );
 
   const savedEntry = (id, clean) => ({
@@ -125,77 +226,119 @@ export function createApp(config = {}) {
     lines: clean.lines.map(apiLine),
   });
 
-  app.post('/api/entries', protectedRoute, (req, res) => {
-    const { clean, errors } = core.validateEntry(req.body, fyStart);
-    if (errors.length) return res.status(422).json({ errors });
-    const id = db.insertEntry(clean);
-    reports.noteChange(); // the PDF reports are now out of date
-    res.status(201).json(savedEntry(id, clean));
-  });
+  const tooManyLines = (body) => Array.isArray(body?.lines) && body.lines.length > MAX_LINES_PER_ENTRY;
 
-  app.put('/api/entries/:eid(\\d+)', protectedRoute, (req, res) => {
-    const id = Number(req.params.eid);
-    if (!db.entryExists(id)) return res.status(404).json({ errors: ['Entry not found.'] });
-    const { clean, errors } = core.validateEntry(req.body, fyStart);
-    if (errors.length) return res.status(422).json({ errors });
-    db.replaceEntry(id, clean);
-    reports.noteChange();
-    res.json(savedEntry(id, clean));
-  });
+  app.post(
+    '/api/entries',
+    needOwner,
+    protectedRoute,
+    wrap(async (req, res) => {
+      if (tooManyLines(req.body)) return res.status(422).json({ errors: [`An entry can have at most ${MAX_LINES_PER_ENTRY} lines.`] });
+      const { clean, errors } = core.validateEntry(req.body, fyStart);
+      if (errors.length) return res.status(422).json({ errors });
+      const used = await db.lineCount(req.owner);
+      if (used + clean.lines.length > settings.maxLines) {
+        return res.status(422).json({ errors: [`The journal holds at most ${settings.maxLines} lines. Delete some entries first.`] });
+      }
+      const id = await db.insertEntry(req.owner, clean);
+      reports.noteChange(); // the Excel PDF reports (live mode) are now out of date
+      res.status(201).json(savedEntry(id, clean));
+    }),
+  );
 
-  app.delete('/api/entries/:eid(\\d+)', protectedRoute, (req, res) => {
-    const id = Number(req.params.eid);
-    if (!db.deleteEntry(id)) return res.status(404).json({ errors: ['Entry not found.'] });
-    reports.noteChange();
-    res.json({ deleted: id });
-  });
+  app.put(
+    '/api/entries/:eid(\\d+)',
+    needOwner,
+    protectedRoute,
+    wrap(async (req, res) => {
+      const id = Number(req.params.eid);
+      if (!(await db.entryExists(req.owner, id))) return res.status(404).json({ errors: ['Entry not found.'] });
+      if (tooManyLines(req.body)) return res.status(422).json({ errors: [`An entry can have at most ${MAX_LINES_PER_ENTRY} lines.`] });
+      const { clean, errors } = core.validateEntry(req.body, fyStart);
+      if (errors.length) return res.status(422).json({ errors });
+      if (!(await db.replaceEntry(req.owner, id, clean))) return res.status(404).json({ errors: ['Entry not found.'] });
+      reports.noteChange();
+      res.json(savedEntry(id, clean));
+    }),
+  );
 
-  // Empties the whole journal (the Excel workbook reads the journal from this app, so it is empty there too
-  // after its next refresh). Entry numbers start again at E0001.
-  app.delete('/api/entries', protectedRoute, (_req, res) => {
-    const deleted = db.clearAll();
-    reports.noteChange();
-    res.json({ deleted });
-  });
+  app.delete(
+    '/api/entries/:eid(\\d+)',
+    needOwner,
+    protectedRoute,
+    wrap(async (req, res) => {
+      const id = Number(req.params.eid);
+      if (!(await db.deleteEntry(req.owner, id))) return res.status(404).json({ errors: ['Entry not found.'] });
+      reports.noteChange();
+      res.json({ deleted: id });
+    }),
+  );
+
+  // Empties this visitor's whole journal (the Excel workbook reads the journal from this app, so it is empty there
+  // too after its next refresh).
+  app.delete(
+    '/api/entries',
+    needOwner,
+    protectedRoute,
+    wrap(async (req, res) => {
+      const deleted = await db.clearAll(req.owner);
+      reports.noteChange();
+      res.json({ deleted });
+    }),
+  );
 
   // Builds the same sample financial year as scripts/seed-sample-year.js and stores it.
   // With entries already present it only goes ahead when ?replace=1 is given (the old entries are removed first).
-  app.post('/api/sample-data', protectedRoute, (req, res) => {
-    const existing = db.entryCount();
-    if (existing && req.query.replace !== '1') {
-      return res.status(409).json({ errors: [`The journal already holds ${existing} entries. Clear it first, or replace them.`] });
-    }
-    try {
-      const { entries } = buildYear(fyStart, settings.taxRate);
-      db.replaceAll(entries);
+  app.post(
+    '/api/sample-data',
+    needOwner,
+    protectedRoute,
+    wrap(async (req, res) => {
+      const existing = await db.entryCount(req.owner);
+      if (existing && req.query.replace !== '1') {
+        return res.status(409).json({ errors: [`The journal already holds ${existing} entries. Clear it first, or replace them.`] });
+      }
+      let entries;
+      try {
+        ({ entries } = buildYear(fyStart, settings.taxRate));
+      } catch (err) {
+        console.error(err);
+        return res.status(500).json({ errors: [`Could not build the sample year: ${err.message}`] });
+      }
+      await db.replaceAll(req.owner, entries);
       reports.noteChange();
       res.status(201).json(countYear(entries));
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ errors: [`Could not build the sample year: ${err.message}`] });
-    }
-  });
+    }),
+  );
 
   // ---------- reports ----------
-  app.get('/api/summary', (req, res) => {
-    const m = core.parseMonth(req.query.through, fyStart);
-    if (m === null) {
-      return res.status(422).json({ errors: ["'through' must be YYYY-MM inside the financial year, or 1 to 12."] });
-    }
-    res.json(core.summary(db.flatLines(), fyStart, m));
-  });
+  app.get(
+    '/api/summary',
+    needOwner,
+    wrap(async (req, res) => {
+      const m = core.parseMonth(req.query.through, fyStart);
+      if (m === null) {
+        return res.status(422).json({ errors: ["'through' must be YYYY-MM inside the financial year, or 1 to 12."] });
+      }
+      res.json(core.summary(await db.flatLines(req.owner), fyStart, m));
+    }),
+  );
 
-  app.get('/api/tax/suggest', (req, res) => {
-    const m = core.parseMonth(req.query.month, fyStart);
-    if (m === null) {
-      return res.status(422).json({ errors: ["'month' must be YYYY-MM inside the financial year, or 1 to 12."] });
-    }
-    res.json(core.taxSuggestion(db.flatLines(), fyStart, m, settings.taxRate));
-  });
+  app.get(
+    '/api/tax/suggest',
+    needOwner,
+    wrap(async (req, res) => {
+      const m = core.parseMonth(req.query.month, fyStart);
+      if (m === null) {
+        return res.status(422).json({ errors: ["'month' must be YYYY-MM inside the financial year, or 1 to 12."] });
+      }
+      res.json(core.taxSuggestion(await db.flatLines(req.owner), fyStart, m, settings.taxRate));
+    }),
+  );
 
   // ---------- feed for Excel and Power BI (same columns as the Journal sheet) ----------
-  const feedRows = () =>
-    db.flatLines().map((r) => [
+  const feedRows = async (owner) =>
+    (await db.flatLines(owner)).map((r) => [
       r.entry_id,
       r.date,
       r.txn_type,
@@ -206,13 +349,23 @@ export function createApp(config = {}) {
       r.description,
     ]);
 
-  app.get('/journal.csv', (_req, res) => {
-    const text = [FEED_COLS, ...feedRows()].map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
-    res.type('text/csv').set('Content-Disposition', 'inline; filename=journal.csv').send(text);
-  });
+  app.get(
+    '/journal.csv',
+    needOwner,
+    wrap(async (req, res) => {
+      const rows = await feedRows(req.owner);
+      const text = [FEED_COLS, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
+      res.type('text/csv').set('Content-Disposition', 'inline; filename=journal.csv').send(text);
+    }),
+  );
 
-  app.get('/api/journal', (_req, res) =>
-    res.json(feedRows().map((row) => Object.fromEntries(FEED_COLS.map((c, i) => [c, row[i]])))),
+  app.get(
+    '/api/journal',
+    needOwner,
+    wrap(async (req, res) => {
+      const rows = await feedRows(req.owner);
+      res.json(rows.map((row) => Object.fromEntries(FEED_COLS.map((c, i) => [c, row[i]]))));
+    }),
   );
 
   // Malformed JSON body: answer in the same { errors } shape as every other failure.
@@ -220,6 +373,9 @@ export function createApp(config = {}) {
   app.use((err, _req, res, _next) => {
     if (err.type === 'entity.parse.failed') {
       return res.status(422).json({ errors: ['Request body is not valid JSON.'] });
+    }
+    if (err.type === 'entity.too.large') {
+      return res.status(413).json({ errors: ['Request body is too large.'] });
     }
     console.error(err);
     res.status(500).json({ errors: ['Server error.'] });
