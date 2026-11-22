@@ -46,7 +46,9 @@ export function createApp(config = {}) {
     // 'live' runs Excel to make the PDF reports; 'static' only serves the PDFs already in excel/exports.
     exportMode: config.exportMode ?? process.env.EXCEL_EXPORT_MODE ?? (onVercel ? 'static' : 'live'),
     excelPath: config.excelPath ?? process.env.EXCEL_PATH ?? path.resolve(serverRoot, '..', 'excel', 'CIC_Financial_Model_v2.xlsx'),
-    exportsDir: config.exportsDir ?? path.resolve(serverRoot, '..', 'excel', 'exports'),
+    // On Vercel the PDFs must live inside server/ so they are deployed with the function (excel/ is outside it).
+    exportsDir:
+      config.exportsDir ?? (onVercel ? path.resolve(serverRoot, 'exports') : path.resolve(serverRoot, '..', 'excel', 'exports')),
     // Quiet time (ms) after a journal change before Excel makes the PDFs in the background. 0 = only when asked.
     prewarmMs: Number(config.prewarmMs ?? process.env.EXCEL_PREWARM_MS ?? 0),
   };
