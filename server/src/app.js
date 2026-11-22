@@ -180,13 +180,28 @@ export function createApp(config = {}) {
   const publicDir = path.join(serverRoot, 'public');
   if (existsSync(publicDir)) app.use(express.static(publicDir));
 
-  app.get('/api/health', (_req, res) =>
-    res.json({
-      status: 'ok',
-      financial_year_start: settings.fyStart,
-      writes_protected: Boolean(settings.apiKey),
-      storage: settings.databaseUrl ? 'postgres' : 'sqlite',
-      reports: settings.exportMode,
+  app.get(
+    '/api/health',
+    wrap(async (req, res) => {
+      const out = {
+        status: 'ok',
+        financial_year_start: settings.fyStart,
+        writes_protected: Boolean(settings.apiKey),
+        storage: settings.databaseUrl ? 'postgres' : 'sqlite',
+        reports: settings.exportMode,
+      };
+      // /api/health?db=1 also tries the database and says what went wrong (never the connection string).
+      if (req.query.db === '1') {
+        try {
+          await db.entryCount('health-check');
+          out.database = 'ok';
+        } catch (err) {
+          console.error('Database check failed:', err);
+          out.status = 'database error';
+          out.database = String(err?.message ?? err).replace(/postgres(ql)?:\/\/\S+/gi, '[connection string]');
+        }
+      }
+      res.status(out.status === 'ok' ? 200 : 503).json(out);
     }),
   );
 

@@ -152,7 +152,17 @@ async function openPostgres(url) {
   // BIGINT comes back as text by default; cents and ids are far below 2^53, so plain numbers are exact.
   types.setTypeParser(20, (v) => Number(v));
 
-  const pool = new Pool({ connectionString: url, max: 3, idleTimeoutMillis: 10000, connectionTimeoutMillis: 8000 });
+  // node-postgres cannot do "channel binding", which some Neon connection strings ask for; leaving it out is safe
+  // (the connection is still encrypted with SSL).
+  let connectionString = url;
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.delete('channel_binding');
+    connectionString = parsed.toString();
+  } catch {
+    /* keep the string as given */
+  }
+  const pool = new Pool({ connectionString, max: 3, idleTimeoutMillis: 10000, connectionTimeoutMillis: 8000 });
   pool.on('error', (err) => console.error('PostgreSQL pool error:', err.message));
   try {
     await pool.query(PG_SCHEMA);
